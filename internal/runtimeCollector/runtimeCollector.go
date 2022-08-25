@@ -11,10 +11,12 @@ import (
 
 var _ collectWorker.Collector = (*Collector)(nil)
 
+// Collector is an object for collecting runtime metrics
 type Collector struct {
 	poolCounter int64
 }
 
+// Collect collects runtime metrics
 func (c *Collector) Collect() metric.Metrics {
 	c.poolCounter++
 

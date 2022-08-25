@@ -11,6 +11,7 @@ import (
 
 const defaultPollInterval = 2 * time.Second
 
+// Collector collects any metrics
 type Collector interface {
 	Collect() metric.Metrics
 }
@@ -21,6 +22,8 @@ type collectWorker struct {
 	collector       Collector
 }
 
+// New creates new instance of collectWorker.
+// collectWorker is a job for collecting metrics with poolInterval
 func New(pollInterval time.Duration, collector Collector) (*collectWorker, error) {
 	if pollInterval == 0 {
 		pollInterval = defaultPollInterval
@@ -36,6 +39,7 @@ func New(pollInterval time.Duration, collector Collector) (*collectWorker, error
 	}, nil
 }
 
+// Run starts collectWorker
 func (w *collectWorker) Run(ctx context.Context) {
 	ticker := time.NewTicker(w.collectInterval)
 
@@ -60,6 +64,7 @@ func (w *collectWorker) Run(ctx context.Context) {
 	}
 }
 
+// Stats returns results of the last collectWorker's metrics pool
 func (w *collectWorker) Stats() metric.Metrics {
 	return w.currentStats
 }
