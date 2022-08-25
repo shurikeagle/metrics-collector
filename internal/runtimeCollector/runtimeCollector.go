@@ -1,4 +1,4 @@
-package runtime
+package runtimeCollector
 
 import (
 	"math/rand"
@@ -9,13 +9,13 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/metric"
 )
 
-var _ collectWorker.Collector = (*RuntimeCollector)(nil)
+var _ collectWorker.Collector = (*Collector)(nil)
 
-type RuntimeCollector struct {
+type Collector struct {
 	poolCounter int64
 }
 
-func (c *RuntimeCollector) Collect() metric.Metrics {
+func (c *Collector) Collect() metric.Metrics {
 	c.poolCounter++
 
 	m := metric.Metrics{
@@ -37,8 +37,8 @@ func addNonRuntimeMetrics(m *metric.Metrics, poolCount int64) {
 }
 
 func addRuntimeMetrics(m *metric.Metrics) {
-	var memstats *runtime.MemStats
-	runtime.ReadMemStats(memstats)
+	var memstats runtime.MemStats
+	runtime.ReadMemStats(&memstats)
 
 	m.Gauges["Alloc"] = float64(memstats.Alloc)
 	m.Gauges["BuckHashSys"] = float64(memstats.BuckHashSys)

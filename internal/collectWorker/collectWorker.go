@@ -36,15 +36,26 @@ func New(pollInterval time.Duration, collector Collector) (*collectWorker, error
 	}, nil
 }
 
-func (w *collectWorker) Run(ctx context.Context) *collectWorker {
+func (w *collectWorker) Run(ctx context.Context) {
 	ticker := time.NewTicker(w.collectInterval)
 
 	for {
 		select {
 		case <-ticker.C:
 			w.currentStats = w.collector.Collect()
+
+			// TODO: Debug, to remove
+			log.Println("============================")
+			for k, v := range w.currentStats.Gauges {
+				log.Println(k, ":", v)
+			}
+			for k, v := range w.currentStats.Counters {
+				log.Println(k, ":", v)
+			}
+			log.Println("============================")
 		case <-ctx.Done():
-			log.Println("context done, stopping collect worker")
+			log.Println(ctx.Err(), ", stopping collect worker")
+			return
 		}
 	}
 }

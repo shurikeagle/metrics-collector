@@ -1,19 +1,24 @@
 package main
 
 import (
-	"fmt"
-	"runtime"
+	"context"
+	"log"
+	"os"
+	"time"
+
+	"github.com/shurikeagle/metrics-collector/internal/collectWorker"
+	"github.com/shurikeagle/metrics-collector/internal/runtimeCollector"
 )
 
 func main() {
-	var memstats runtime.MemStats
+	rCollector := runtimeCollector.Collector{}
+	worker, err := collectWorker.New(2*time.Second, &rCollector)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 
-	runtime.ReadMemStats(&memstats)
-
-	fmt.Println(memstats.Alloc)
-	fmt.Println(memstats.TotalAlloc)
-	fmt.Println(memstats.BuckHashSys)
-	fmt.Println(memstats.Frees)
-	fmt.Println(memstats.GCCPUFraction)
-	fmt.Println(memstats.GCSys)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelFunc()
+	worker.Run(ctx)
 }
