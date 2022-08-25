@@ -9,31 +9,62 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/metric"
 )
 
-var counter int64 = 0
-var memstats *runtime.MemStats
-
 var _ collectWorker.Collector = (*RuntimeCollector)(nil)
 
-type RuntimeCollector struct{}
-
-func (c RuntimeCollector) Collect() metric.Metrics {
-	runtime.ReadMemStats(memstats)
-
-	return createMetrics(*memstats)
+type RuntimeCollector struct {
+	poolCounter int64
 }
 
-func createMetrics(runtime.MemStats) metric.Metrics {
+func (c *RuntimeCollector) Collect() metric.Metrics {
+	c.poolCounter++
+
 	m := metric.Metrics{
-		Gauges:   make(map[string]float64, 0), // TODO: Presize
-		Counters: make(map[string]int64, 0),   // TODO: Presize
+		Gauges:   make(map[string]float64, 28),
+		Counters: make(map[string]int64, 1),
 	}
 
-	// TODO: Move to collectWorker
+	addNonRuntimeMetrics(&m, c.poolCounter)
+	addRuntimeMetrics(&m)
+
+	return m
+}
+
+func addNonRuntimeMetrics(m *metric.Metrics, poolCount int64) {
 	rnd := rand.NewSource(time.Now().UnixNano())
 	m.Gauges["RandomValue"] = float64(rnd.Int63())
 
-	counter++
-	m.Counters["PollCount"] = counter
+	m.Counters["PollCount"] = poolCount
+}
 
-	return m
+func addRuntimeMetrics(m *metric.Metrics) {
+	var memstats *runtime.MemStats
+	runtime.ReadMemStats(memstats)
+
+	m.Gauges["Alloc"] = float64(memstats.Alloc)
+	m.Gauges["BuckHashSys"] = float64(memstats.BuckHashSys)
+	m.Gauges["Frees"] = float64(memstats.Frees)
+	m.Gauges["GCCPUFraction"] = float64(memstats.GCCPUFraction)
+	m.Gauges["GCSys"] = float64(memstats.GCSys)
+	m.Gauges["HeapAlloc"] = float64(memstats.HeapAlloc)
+	m.Gauges["HeapIdle"] = float64(memstats.HeapIdle)
+	m.Gauges["HeapInuse"] = float64(memstats.HeapInuse)
+	m.Gauges["HeapObjects"] = float64(memstats.HeapObjects)
+	m.Gauges["HeapReleased"] = float64(memstats.HeapReleased)
+	m.Gauges["HeapSys"] = float64(memstats.HeapSys)
+	m.Gauges["LastGC"] = float64(memstats.LastGC)
+	m.Gauges["Lookups"] = float64(memstats.Lookups)
+	m.Gauges["MCacheInuse"] = float64(memstats.MCacheInuse)
+	m.Gauges["MCacheSys"] = float64(memstats.MCacheSys)
+	m.Gauges["MSpanInuse"] = float64(memstats.MSpanInuse)
+	m.Gauges["MSpanSys"] = float64(memstats.MSpanSys)
+	m.Gauges["Mallocs"] = float64(memstats.Mallocs)
+	m.Gauges["NextGC"] = float64(memstats.NextGC)
+	m.Gauges["NumForcedGC"] = float64(memstats.NumForcedGC)
+	m.Gauges["NumGC"] = float64(memstats.NumGC)
+	m.Gauges["OtherSys"] = float64(memstats.OtherSys)
+	m.Gauges["PauseTotalNs"] = float64(memstats.PauseTotalNs)
+	m.Gauges["StackInuse"] = float64(memstats.StackInuse)
+	m.Gauges["StackSys"] = float64(memstats.StackSys)
+	m.Gauges["Sys"] = float64(memstats.Sys)
+	m.Gauges["TotalAlloc"] = float64(memstats.TotalAlloc)
 }
