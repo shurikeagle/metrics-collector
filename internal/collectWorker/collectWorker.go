@@ -9,7 +9,7 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/metric"
 )
 
-const defaultPollInterval = 2 * time.Second
+const defaultPollInterval = 2 * time.Second // TODO: move to main
 
 // Collector collects any metrics
 type Collector interface {
@@ -47,16 +47,6 @@ func (w *collectWorker) Run(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			w.currentStats = w.collector.Collect()
-
-			// TODO: Debug, to remove
-			log.Println("============================")
-			for k, v := range w.currentStats.Gauges {
-				log.Println(k, ":", v)
-			}
-			for k, v := range w.currentStats.Counters {
-				log.Println(k, ":", v)
-			}
-			log.Println("============================")
 		case <-ctx.Done():
 			log.Println(ctx.Err(), ", stopping collect worker")
 			return
