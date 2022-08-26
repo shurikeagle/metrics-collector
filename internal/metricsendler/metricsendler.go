@@ -16,7 +16,7 @@ import (
 const sendTimeout = 5 * time.Second
 
 type sendler struct {
-	serverUrl      string
+	serverURL      string
 	client         *http.Client
 	reportInterval time.Duration
 }
@@ -38,7 +38,7 @@ func New(ip string, port uint16, reportInterval time.Duration) (*sendler, error)
 	}
 
 	return &sendler{
-		serverUrl:      sURL,
+		serverURL:      sURL,
 		reportInterval: reportInterval,
 		client:         &http.Client{},
 	}, nil
@@ -75,7 +75,7 @@ func (s *sendler) makeSendMetricRequest(metricType string, metricName string, va
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
 
 	// TODO: Url validation and special symbols handling
-	mURL := fmt.Sprintf("%s/update/%s/%s/%s", s.serverUrl, metricType, metricName, value)
+	mURL := fmt.Sprintf("%s/update/%s/%s/%s", s.serverURL, metricType, metricName, value)
 
 	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, nil)
 	if err != nil {
