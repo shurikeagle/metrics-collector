@@ -10,7 +10,7 @@ import (
 
 	"github.com/shurikeagle/metrics-collector/internal/metricsendler"
 	"github.com/shurikeagle/metrics-collector/internal/pollworker"
-	"github.com/shurikeagle/metrics-collector/internal/runtimePoller"
+	"github.com/shurikeagle/metrics-collector/internal/runtimepoller"
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 )
 
 func main() {
-	rPoller := runtimePoller.Poller{}
+	rPoller := runtimepoller.Poller{}
 	worker, err := pollworker.New(&rPoller, pollInterval)
 	if err != nil {
 		log.Println(err)

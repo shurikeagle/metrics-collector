@@ -1,4 +1,4 @@
-package runtimePoller
+package runtimepoller
 
 import (
 	"math/rand"
