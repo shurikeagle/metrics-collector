@@ -9,8 +9,6 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/metric"
 )
 
-const defaultPollInterval = 2 * time.Second // TODO: move to main
-
 // Poller collects any metrics
 type Poller interface {
 	Poll() metric.Metrics
@@ -24,13 +22,13 @@ type pollWorker struct {
 
 // New creates new instance of pollWorker.
 // pollWorker is a job for collecting metrics with pollInterval
-func New(pollInterval time.Duration, poller Poller) (*pollWorker, error) {
-	if pollInterval == 0 {
-		pollInterval = defaultPollInterval
-	}
-
+func New(poller Poller, pollInterval time.Duration) (*pollWorker, error) {
 	if poller == nil {
 		return nil, errors.New("collector param is empty")
+	}
+
+	if pollInterval == 0 {
+		return nil, errors.New("pollInterval can't be 0")
 	}
 
 	return &pollWorker{
