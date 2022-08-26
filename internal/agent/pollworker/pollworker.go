@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/shurikeagle/metrics-collector/internal/metric"
+	"github.com/shurikeagle/metrics-collector/internal/agent/metric"
 )
 
 // Poller collects any metrics

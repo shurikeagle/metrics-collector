@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/shurikeagle/metrics-collector/internal/metric"
-	"github.com/shurikeagle/metrics-collector/internal/pollworker"
+	"github.com/shurikeagle/metrics-collector/internal/agent/metric"
+	"github.com/shurikeagle/metrics-collector/internal/agent/pollworker"
 )
 
 var _ pollworker.Poller = (*Poller)(nil)

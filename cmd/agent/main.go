@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shurikeagle/metrics-collector/internal/metricsendler"
-	"github.com/shurikeagle/metrics-collector/internal/pollworker"
-	"github.com/shurikeagle/metrics-collector/internal/runtimepoller"
+	"github.com/shurikeagle/metrics-collector/internal/agent/metricsendler"
+	"github.com/shurikeagle/metrics-collector/internal/agent/pollworker"
+	"github.com/shurikeagle/metrics-collector/internal/agent/runtimepoller"
 )
 
 const (
@@ -24,6 +24,8 @@ const (
 )
 
 func main() {
+	log.Println("poll agent start")
+
 	rPoller := runtimepoller.Poller{}
 	worker, err := pollworker.New(&rPoller, pollInterval)
 	if err != nil {

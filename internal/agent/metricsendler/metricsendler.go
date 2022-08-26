@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shurikeagle/metrics-collector/internal/metric"
+	"github.com/shurikeagle/metrics-collector/internal/agent/metric"
 )
 
 const sendTimeout = 5 * time.Second
