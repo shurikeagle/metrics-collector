@@ -8,13 +8,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shurikeagle/metrics-collector/internal/collectWorker"
-	"github.com/shurikeagle/metrics-collector/internal/runtimeCollector"
+	"github.com/shurikeagle/metrics-collector/internal/pollWorker"
+	"github.com/shurikeagle/metrics-collector/internal/runtimePoller"
+)
+
+const (
+	serverIp   = "http://localhost"
+	serverPort = "8080"
+)
+
+const (
+	pollInterval   = 2 * time.Second
+	reportInterval = 10 * time.Second
 )
 
 func main() {
-	rCollector := runtimeCollector.Collector{}
-	worker, err := collectWorker.New(2*time.Second, &rCollector)
+	rPoller := runtimePoller.Poller{}
+	worker, err := pollWorker.New(2*time.Second, &rPoller)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

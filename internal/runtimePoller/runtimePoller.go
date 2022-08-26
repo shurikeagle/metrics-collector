@@ -1,31 +1,31 @@
-package runtimeCollector
+package runtimePoller
 
 import (
 	"math/rand"
 	"runtime"
 	"time"
 
-	"github.com/shurikeagle/metrics-collector/internal/collectWorker"
 	"github.com/shurikeagle/metrics-collector/internal/metric"
+	"github.com/shurikeagle/metrics-collector/internal/pollWorker"
 )
 
-var _ collectWorker.Collector = (*Collector)(nil)
+var _ pollWorker.Poller = (*Poller)(nil)
 
-// Collector is an object for collecting runtime metrics
-type Collector struct {
-	poolCounter int64
+// Poller is an object for collecting runtime metrics
+type Poller struct {
+	pollCounter int64
 }
 
-// Collect collects runtime metrics
-func (c *Collector) Collect() metric.Metrics {
-	c.poolCounter++
+// Poll collects runtime metrics
+func (p *Poller) Poll() metric.Metrics {
+	p.pollCounter++
 
 	m := metric.Metrics{
 		Gauges:   make(map[string]float64, 28),
 		Counters: make(map[string]int64, 1),
 	}
 
-	addNonRuntimeMetrics(&m, c.poolCounter)
+	addNonRuntimeMetrics(&m, p.pollCounter)
 	addRuntimeMetrics(&m)
 
 	return m
