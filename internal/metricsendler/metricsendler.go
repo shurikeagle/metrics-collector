@@ -32,13 +32,13 @@ func New(ip string, port uint16, reportInterval time.Duration) (*sendler, error)
 		return nil, errors.New("report can't be 0")
 	}
 
-	sUrl := fmt.Sprintf("%s:%d", ip, port)
-	if _, err := url.Parse(sUrl); err != nil {
+	sURL := fmt.Sprintf("%s:%d", ip, port)
+	if _, err := url.Parse(sURL); err != nil {
 		return nil, err
 	}
 
 	return &sendler{
-		serverUrl:      sUrl,
+		serverUrl:      sURL,
 		reportInterval: reportInterval,
 		client:         &http.Client{},
 	}, nil
@@ -75,9 +75,9 @@ func (s *sendler) makeSendMetricRequest(metricType string, metricName string, va
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
 
 	// TODO: Url validation and special symbols handling
-	mUrl := fmt.Sprintf("%s/update/%s/%s/%s", s.serverUrl, metricType, metricName, value)
+	mURL := fmt.Sprintf("%s/update/%s/%s/%s", s.serverUrl, metricType, metricName, value)
 
-	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mUrl, nil)
+	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, nil)
 	if err != nil {
 		// we send same requests in send func, so err in making request is fatal
 		log.Fatal(err)
