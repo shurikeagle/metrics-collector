@@ -1,4 +1,4 @@
-package pollWorker
+package pollworker
 
 import (
 	"context"

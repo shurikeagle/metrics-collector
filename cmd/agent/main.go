@@ -8,13 +8,13 @@ import (
 	"syscall"
 	"time"
 
-	metricsSendler "github.com/shurikeagle/metrics-collector/internal/metricsSendler"
-	"github.com/shurikeagle/metrics-collector/internal/pollWorker"
+	"github.com/shurikeagle/metrics-collector/internal/metricsendler"
+	"github.com/shurikeagle/metrics-collector/internal/pollworker"
 	"github.com/shurikeagle/metrics-collector/internal/runtimePoller"
 )
 
 const (
-	serverIp   = "http://127.0.0.1"
+	serverIP   = "http://127.0.0.1"
 	serverPort = 8080
 )
 
@@ -25,13 +25,13 @@ const (
 
 func main() {
 	rPoller := runtimePoller.Poller{}
-	worker, err := pollWorker.New(&rPoller, pollInterval)
+	worker, err := pollworker.New(&rPoller, pollInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	mSedler, err := metricsSendler.New(serverIp, serverPort, reportInterval)
+	mSedler, err := metricsendler.New(serverIP, serverPort, reportInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

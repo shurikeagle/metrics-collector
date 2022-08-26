@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/shurikeagle/metrics-collector/internal/metric"
-	"github.com/shurikeagle/metrics-collector/internal/pollWorker"
+	"github.com/shurikeagle/metrics-collector/internal/pollworker"
 )
 
-var _ pollWorker.Poller = (*Poller)(nil)
+var _ pollworker.Poller = (*Poller)(nil)
 
 // Poller is an object for collecting runtime metrics
 type Poller struct {

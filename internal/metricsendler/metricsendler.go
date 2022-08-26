@@ -1,4 +1,4 @@
-package metricsSendler
+package metricsendler
 
 import (
 	"context"
@@ -92,8 +92,10 @@ func (s *sendler) makeSendMetricRequest(metricType string, metricName string, va
 		return
 	}
 
+	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusOK {
-		errStr := "response status for" + mUrl + "is" + response.Status
+		errStr := "response status for" + mURL + "is" + response.Status
 		log.Println(errStr)
 	}
 }
