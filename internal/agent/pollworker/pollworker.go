@@ -54,5 +54,6 @@ func (w *pollWorker) Run(ctx context.Context) {
 
 // Stats returns results of the last pollWorker's metrics poll
 func (w *pollWorker) Stats() metric.Metrics {
+	// TODO: Set counter to 0. Counter name to consts!
 	return w.currentStats
 }

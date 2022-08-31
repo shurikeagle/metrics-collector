@@ -74,7 +74,7 @@ func (s *sendler) send(metrics metric.Metrics) {
 func (s *sendler) makeSendMetricRequest(metricType string, metricName string, value string) {
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
 
-	// TODO: Url validation and special symbols handling
+	// TODO: Check if need url validation and special symbols handling
 	mURL := fmt.Sprintf("%s/update/%s/%s/%s", s.serverURL, metricType, metricName, value)
 
 	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, nil)
@@ -84,7 +84,7 @@ func (s *sendler) makeSendMetricRequest(metricType string, metricName string, va
 	}
 	defer cancelFunc()
 
-	request.Header.Add("Content-Type", "Content-Type: text/plain")
+	request.Header.Add("Content-Type", "text/plain")
 
 	response, err := s.client.Do(request)
 	if err != nil {

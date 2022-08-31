@@ -7,6 +7,7 @@ import (
 
 var _ storage.MetricRepository = (*InmemMetricRepository)(nil)
 
+// TODO: Chekc if need to initialize maps
 type InmemMetricRepository struct {
 	gauges   map[string]float64
 	counters map[string]int64
@@ -17,9 +18,12 @@ func (r *InmemMetricRepository) AddOrUpdateGauge(g metric.Gauge) {
 }
 
 func (r *InmemMetricRepository) AddOrUpdateCounter(c metric.Counter) {
-	if curentVal, ok := r.counters[c.Name]; !ok {
-		r.counters[c.Name] = curentVal
-	} else {
-		r.counters[c.Name] += curentVal
-	}
+	r.counters[c.Name] = c.Value
+}
+
+func (r *InmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
+	c.Name = name
+	c.Value, ok = r.counters[c.Name]
+
+	return
 }
