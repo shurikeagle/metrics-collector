@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	serverIP   = "http://127.0.0.1"
+	serverIP   = "127.0.0.1"
 	serverPort = 8080
 )
 
 func main() {
 	log.Println("starting metric server")
-	storage := &inmemory.InmemMetricRepository{}
+	storage := inmemory.New()
 	mServer := metricserver.New(
 		serverIP,
 		serverPort,
