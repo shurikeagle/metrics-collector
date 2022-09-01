@@ -13,29 +13,24 @@ var _ pollworker.Poller = (*Poller)(nil)
 
 // Poller is an object for collecting runtime metrics
 type Poller struct {
-	pollCounter int64
 }
 
 // Poll collects runtime metrics
 func (p *Poller) Poll() metric.Metrics {
-	p.pollCounter++
-
 	m := metric.Metrics{
 		Gauges:   make(map[string]float64, 28),
 		Counters: make(map[string]int64, 1),
 	}
 
-	addNonRuntimeMetrics(&m, p.pollCounter)
+	addNonRuntimeMetrics(&m)
 	addRuntimeMetrics(&m)
 
 	return m
 }
 
-func addNonRuntimeMetrics(m *metric.Metrics, poolCount int64) {
+func addNonRuntimeMetrics(m *metric.Metrics) {
 	rnd := rand.NewSource(time.Now().UnixNano())
 	m.Gauges["RandomValue"] = float64(rnd.Int63())
-
-	m.Counters["PollCount"] = poolCount
 }
 
 func addRuntimeMetrics(m *metric.Metrics) {

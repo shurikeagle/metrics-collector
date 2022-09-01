@@ -18,6 +18,7 @@ type pollWorker struct {
 	pollInterval time.Duration
 	currentStats metric.Metrics
 	poller       Poller
+	pollCounter  int64
 }
 
 // New creates new instance of pollWorker.
@@ -45,6 +46,7 @@ func (w *pollWorker) Run(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			w.currentStats = w.poller.Poll()
+			w.pollCounter++
 		case <-ctx.Done():
 			log.Println(ctx.Err(), ", stopping poll worker")
 			return
@@ -54,6 +56,8 @@ func (w *pollWorker) Run(ctx context.Context) {
 
 // Stats returns results of the last pollWorker's metrics poll
 func (w *pollWorker) Stats() metric.Metrics {
-	// TODO: Set counter to 0. Counter name to consts!
+	w.currentStats.Counters["PollCount"] = w.pollCounter
+	w.pollCounter = 0
+
 	return w.currentStats
 }
