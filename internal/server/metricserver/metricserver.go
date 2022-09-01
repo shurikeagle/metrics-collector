@@ -21,13 +21,13 @@ type decomposedUpdatePath struct {
 	metricValue string
 }
 
-type metricserver struct {
+type metricServer struct {
 	server  *http.Server
 	handler *metrichandler.Handler
 }
 
-func New(ip string, port uint16, storage storage.MetricRepository) *metricserver {
-	mServer := &metricserver{
+func New(ip string, port uint16, storage storage.MetricRepository) *metricServer {
+	mServer := &metricServer{
 		handler: metrichandler.New(storage),
 	}
 
@@ -36,11 +36,11 @@ func New(ip string, port uint16, storage storage.MetricRepository) *metricserver
 	return mServer
 }
 
-func (s *metricserver) Run() error {
+func (s *metricServer) Run() error {
 	return s.server.ListenAndServe()
 }
 
-func (s *metricserver) buildHttp(ip string, port uint16) {
+func (s *metricServer) buildHttp(ip string, port uint16) {
 	mux := http.NewServeMux()
 	mux.Handle("/update/", http.HandlerFunc(s.handleUpdate))
 
@@ -52,8 +52,8 @@ func (s *metricserver) buildHttp(ip string, port uint16) {
 	}
 }
 
-func (s *metricserver) handleUpdate(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+func (s *metricServer) handleUpdate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotFound)
@@ -86,6 +86,7 @@ func (s *metricserver) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "ok")
 }
 
 func decomposeUpdateMetricPath(path string) (decomposedUpdatePath, error) {
@@ -102,7 +103,7 @@ func decomposeUpdateMetricPath(path string) (decomposedUpdatePath, error) {
 	}, nil
 }
 
-func (s *metricserver) updateMetricByDecomposedPath(decomposedPath decomposedUpdatePath) error {
+func (s *metricServer) updateMetricByDecomposedPath(decomposedPath decomposedUpdatePath) error {
 	metricType := strings.ToLower(decomposedPath.metricType)
 	switch metricType {
 	case "gauge":
