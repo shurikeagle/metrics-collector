@@ -26,6 +26,7 @@ type metricServer struct {
 	handler *metrichandler.Handler
 }
 
+// New create http metricServer with metric api handling
 func New(ip string, port uint16, storage storage.MetricRepository) *metricServer {
 	mServer := &metricServer{
 		handler: metrichandler.New(storage),
@@ -36,6 +37,7 @@ func New(ip string, port uint16, storage storage.MetricRepository) *metricServer
 	return mServer
 }
 
+// Run starts metricServer
 func (s *metricServer) Run() error {
 	return s.server.ListenAndServe()
 }
