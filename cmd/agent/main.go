@@ -42,7 +42,9 @@ func main() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	go worker.Run(ctx)
+	go func() {
+		log.Println(worker.Run(ctx))
+	}()
 	go mSedler.Run(ctx, worker.Stats)
 
 	quit := make(chan os.Signal, 1)

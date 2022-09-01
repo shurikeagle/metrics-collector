@@ -15,6 +15,7 @@ type Poller interface {
 }
 
 type pollWorker struct {
+	running      bool
 	pollInterval time.Duration
 	currentStats metric.Metrics
 	poller       Poller
@@ -35,11 +36,20 @@ func New(poller Poller, pollInterval time.Duration) (*pollWorker, error) {
 	return &pollWorker{
 		pollInterval: pollInterval,
 		poller:       poller,
+		currentStats: metric.Metrics{
+			Gauges:   make(map[string]float64),
+			Counters: make(map[string]int64),
+		},
 	}, nil
 }
 
 // Run starts pollWorker
-func (w *pollWorker) Run(ctx context.Context) {
+func (w *pollWorker) Run(ctx context.Context) error {
+	if w.running {
+		return errors.New("poll worker is already running")
+	}
+	w.running = true
+
 	ticker := time.NewTicker(w.pollInterval)
 
 	for {
@@ -49,7 +59,8 @@ func (w *pollWorker) Run(ctx context.Context) {
 			w.pollCounter++
 		case <-ctx.Done():
 			log.Println(ctx.Err(), ", stopping poll worker")
-			return
+			w.running = false
+			return nil
 		}
 	}
 }
