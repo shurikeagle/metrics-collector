@@ -32,7 +32,7 @@ func New(ip string, port uint16, storage storage.MetricRepository) *metricServer
 		handler: metrichandler.New(storage),
 	}
 
-	mServer.buildHttp(ip, port)
+	mServer.buildHTTP(ip, port)
 
 	return mServer
 }
@@ -42,7 +42,7 @@ func (s *metricServer) Run() error {
 	return s.server.ListenAndServe()
 }
 
-func (s *metricServer) buildHttp(ip string, port uint16) {
+func (s *metricServer) buildHTTP(ip string, port uint16) {
 	mux := http.NewServeMux()
 	mux.Handle("/update/", http.HandlerFunc(s.handleUpdate))
 
@@ -55,6 +55,8 @@ func (s *metricServer) buildHttp(ip string, port uint16) {
 }
 
 func (s *metricServer) handleUpdate(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	w.Header().Set("Content-Type", "text/plain")
 
 	if r.Method != http.MethodPost {
@@ -74,14 +76,19 @@ func (s *metricServer) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	decomposedPath, err := decomposeUpdateMetricPath(r.URL.Path)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintln(w, err)
 
 		return
 	}
 
 	if err := s.updateMetricByDecomposedPath(decomposedPath); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		if err == ErrUnexpectedMetricType {
+			w.WriteHeader(http.StatusNotImplemented)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
 		fmt.Fprintln(w, err)
 
 		return
@@ -94,7 +101,7 @@ func (s *metricServer) handleUpdate(w http.ResponseWriter, r *http.Request) {
 func decomposeUpdateMetricPath(path string) (decomposedUpdatePath, error) {
 	path = strings.Trim(path, "/")
 	splited := strings.Split(path, "/")
-	if len(splited) != 4 {
+	if len(splited) < 4 {
 		return decomposedUpdatePath{}, ErrInvalidPathFormat
 	}
 

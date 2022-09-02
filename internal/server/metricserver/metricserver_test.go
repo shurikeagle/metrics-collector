@@ -32,19 +32,19 @@ func Test_metricserver_handleUpdate(t *testing.T) {
 			name:         "update without other path",
 			method:       http.MethodPost,
 			path:         "/update/",
-			expectedCode: http.StatusBadRequest,
+			expectedCode: http.StatusNotFound,
 		},
 		{
 			name:         "update metric without value",
 			method:       http.MethodPost,
 			path:         "/update/Gauge/Name/",
-			expectedCode: http.StatusBadRequest,
+			expectedCode: http.StatusNotFound,
 		},
 		{
 			name:         "update unexpected metric",
 			method:       http.MethodPost,
 			path:         "/update/Unexpected/Name/42",
-			expectedCode: http.StatusBadRequest,
+			expectedCode: http.StatusNotImplemented,
 		},
 		{
 			name:         "invalid hhtp method",
