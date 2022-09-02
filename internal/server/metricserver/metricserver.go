@@ -66,14 +66,6 @@ func (s *metricServer) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentType := r.Header.Get("Content-type")
-	if contentType != "text/plain" && contentType != "text/plain; charset=utf-8" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "invalid content type", contentType)
-
-		return
-	}
-
 	decomposedPath, err := decomposeUpdateMetricPath(r.URL.Path)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)

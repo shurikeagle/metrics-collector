@@ -95,6 +95,7 @@ func Test_metricserver_handleUpdate(t *testing.T) {
 			h := http.HandlerFunc(server.handleUpdate)
 			h.ServeHTTP(w, request)
 			res := w.Result()
+			defer res.Body.Close()
 
 			assert.Equal(t, tt.expectedCode, res.StatusCode)
 		})
