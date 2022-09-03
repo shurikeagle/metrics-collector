@@ -19,17 +19,24 @@ func New() *inmemMetricRepository {
 	}
 }
 
+func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
+	c.Name = name
+	c.Value, ok = r.counters[c.Name]
+
+	return
+}
+
+func (r *inmemMetricRepository) GetGauge(name string) (c metric.Gauge, ok bool) {
+	c.Name = name
+	c.Value, ok = r.gauges[c.Name]
+
+	return
+}
+
 func (r *inmemMetricRepository) AddOrUpdateGauge(g metric.Gauge) {
 	r.gauges[g.Name] = g.Value
 }
 
 func (r *inmemMetricRepository) AddOrUpdateCounter(c metric.Counter) {
 	r.counters[c.Name] = c.Value
-}
-
-func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
-	c.Name = name
-	c.Value, ok = r.counters[c.Name]
-
-	return
 }

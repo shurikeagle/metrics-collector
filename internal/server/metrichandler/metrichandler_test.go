@@ -1,4 +1,4 @@
-package metricserver
+package metrichandler
 
 import (
 	"net/http"
@@ -8,6 +8,7 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/server/metric"
 	"github.com/shurikeagle/metrics-collector/internal/server/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type moqMetricRepository struct{}
@@ -17,11 +18,13 @@ var _ storage.MetricRepository = (*moqMetricRepository)(nil)
 func (r *moqMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
 	return metric.Counter{}, true
 }
+func (r *moqMetricRepository) GetGauge(name string) (c metric.Gauge, ok bool) {
+	return metric.Gauge{}, true
+}
 func (r *moqMetricRepository) AddOrUpdateGauge(g metric.Gauge)     {}
 func (r *moqMetricRepository) AddOrUpdateCounter(c metric.Counter) {}
 
-func Test_metricserver_handleUpdate(t *testing.T) {
-
+func TestUpdateHandler(t *testing.T) {
 	tests := []struct {
 		name         string
 		method       string
@@ -50,7 +53,7 @@ func Test_metricserver_handleUpdate(t *testing.T) {
 			name:         "invalid hhtp method",
 			method:       http.MethodGet,
 			path:         "/update/Counter/Name/42",
-			expectedCode: http.StatusNotFound,
+			expectedCode: http.StatusMethodNotAllowed,
 		},
 		{
 			name:         "update gauge with string value",
@@ -84,20 +87,21 @@ func Test_metricserver_handleUpdate(t *testing.T) {
 		},
 	}
 
-	server := New("127.0.0.1", 8080, &moqMetricRepository{})
+	r := New(&moqMetricRepository{})
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(tt.method, tt.path, nil)
-			request.Header.Add("Content-type", "text/plain")
+			req, err := http.NewRequest(tt.method, ts.URL+tt.path, nil)
+			require.NoError(t, err)
 
-			w := httptest.NewRecorder()
-			h := http.HandlerFunc(server.handleUpdate)
-			h.ServeHTTP(w, request)
-			res := w.Result()
-			defer res.Body.Close()
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
 
-			assert.Equal(t, tt.expectedCode, res.StatusCode)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.expectedCode, resp.StatusCode)
 		})
 	}
 }
