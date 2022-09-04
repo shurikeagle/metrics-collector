@@ -57,14 +57,14 @@ func (h *handler) getAllHandler() http.HandlerFunc {
 			sb.WriteString(li)
 		}
 		for _, g := range gauges {
-			li := fmt.Sprintf("		<li>%s: %f</li>\n", g.Name, g.Value)
+			li := fmt.Sprintf("		<li>%s: %.3f</li>\n", g.Name, g.Value)
 			sb.WriteString(li)
 		}
 
-		respHtml := fmt.Sprintf(metricListTemplate, sb.String())
+		respHTML := fmt.Sprintf(metricListTemplate, sb.String())
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, respHtml)
+		fmt.Fprintln(w, respHTML)
 	}
 }
 
@@ -77,7 +77,7 @@ func (h *handler) getMetricValue(r *http.Request) (string, error) {
 		if g, ok := h.storage.GetGauge(metricName); !ok {
 			return "", ErrMetricNotFound
 		} else {
-			return fmt.Sprintf("%f", g.Value), nil
+			return fmt.Sprintf("%.3f", g.Value), nil
 		}
 	case "counter":
 		if c, ok := h.storage.GetCounter(metricName); !ok {
