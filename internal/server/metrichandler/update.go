@@ -1,7 +1,6 @@
 package metrichandler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,8 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/shurikeagle/metrics-collector/internal/server/metric"
 )
-
-var ErrUnexpectedMetricType = errors.New("unexpected metric type")
 
 // POST /update/{metricType}/{metricName}/{metricValue}
 func (h *handler) updateHandler() http.HandlerFunc {

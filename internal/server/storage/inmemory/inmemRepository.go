@@ -19,6 +19,27 @@ func New() *inmemMetricRepository {
 	}
 }
 
+func (r *inmemMetricRepository) GetAll() ([]metric.Counter, []metric.Gauge) {
+	counters := make([]metric.Counter, 0, len(r.counters))
+	gauges := make([]metric.Gauge, 0, len(r.gauges))
+
+	for n, v := range r.counters {
+		counters = append(counters, metric.Counter{
+			Name:  n,
+			Value: v,
+		})
+	}
+
+	for n, v := range r.gauges {
+		gauges = append(gauges, metric.Gauge{
+			Name:  n,
+			Value: v,
+		})
+	}
+
+	return counters, gauges
+}
+
 func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
 	c.Name = name
 	c.Value, ok = r.counters[c.Name]

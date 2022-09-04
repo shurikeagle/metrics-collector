@@ -15,6 +15,9 @@ type moqMetricRepository struct{}
 
 var _ storage.MetricRepository = (*moqMetricRepository)(nil)
 
+func (r *moqMetricRepository) GetAll() ([]metric.Counter, []metric.Gauge) {
+	return make([]metric.Counter, 0), make([]metric.Gauge, 0)
+}
 func (r *moqMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
 	return metric.Counter{}, true
 }
