@@ -11,27 +11,25 @@ import (
 )
 
 // POST /update/{metricType}/{metricName}/{metricValue}
-func (h *handler) updateHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+func (h *handler) updateHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
-		w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "text/plain")
 
-		if err := h.updateMetricFromRequest(r); err != nil {
-			if err == ErrUnexpectedMetricType {
-				w.WriteHeader(http.StatusNotImplemented)
-			} else {
-				w.WriteHeader(http.StatusBadRequest)
-			}
-
-			fmt.Fprintln(w, err)
-
-			return
+	if err := h.updateMetricFromRequest(r); err != nil {
+		if err == ErrUnexpectedMetricType {
+			w.WriteHeader(http.StatusNotImplemented)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "ok")
+		fmt.Fprintln(w, err)
+
+		return
 	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "ok")
 }
 
 func (h *handler) updateMetricFromRequest(r *http.Request) error {

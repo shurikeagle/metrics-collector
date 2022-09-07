@@ -46,6 +46,7 @@ func New(ip string, port uint16, reportInterval time.Duration) (*sendler, error)
 
 func (s *sendler) Run(ctx context.Context, getMetricsFunc func() metric.Metrics) {
 	ticker := time.NewTicker(s.reportInterval)
+	defer ticker.Stop()
 
 	for {
 		select {

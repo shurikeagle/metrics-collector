@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/shurikeagle/metrics-collector/internal/agent/metric"
@@ -20,6 +21,7 @@ type pollWorker struct {
 	currentStats metric.Metrics
 	poller       Poller
 	pollCounter  int64
+	mx           sync.RWMutex
 }
 
 // New creates new instance of pollWorker.
@@ -51,6 +53,7 @@ func (w *pollWorker) Run(ctx context.Context) error {
 	w.running = true
 
 	ticker := time.NewTicker(w.pollInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -67,6 +70,9 @@ func (w *pollWorker) Run(ctx context.Context) error {
 
 // Stats returns results of the last pollWorker's metrics poll
 func (w *pollWorker) Stats() metric.Metrics {
+	w.mx.RLock()
+	defer w.mx.RUnlock()
+
 	w.currentStats.Counters["PollCount"] = w.pollCounter
 	w.pollCounter = 0
 

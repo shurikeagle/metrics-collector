@@ -1,6 +1,8 @@
 package inmemory
 
 import (
+	"sync"
+
 	"github.com/shurikeagle/metrics-collector/internal/server/metric"
 	"github.com/shurikeagle/metrics-collector/internal/server/storage"
 )
@@ -10,6 +12,7 @@ var _ storage.MetricRepository = (*inmemMetricRepository)(nil)
 type inmemMetricRepository struct {
 	gauges   map[string]float64
 	counters map[string]int64
+	mx       sync.RWMutex
 }
 
 func New() *inmemMetricRepository {
@@ -20,6 +23,9 @@ func New() *inmemMetricRepository {
 }
 
 func (r *inmemMetricRepository) GetAll() ([]metric.Counter, []metric.Gauge) {
+	r.mx.RLock()
+	defer r.mx.RUnlock()
+
 	counters := make([]metric.Counter, 0, len(r.counters))
 	gauges := make([]metric.Gauge, 0, len(r.gauges))
 
@@ -41,6 +47,9 @@ func (r *inmemMetricRepository) GetAll() ([]metric.Counter, []metric.Gauge) {
 }
 
 func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
+	r.mx.RLock()
+	defer r.mx.RUnlock()
+
 	c.Name = name
 	c.Value, ok = r.counters[c.Name]
 
@@ -48,6 +57,9 @@ func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bo
 }
 
 func (r *inmemMetricRepository) GetGauge(name string) (c metric.Gauge, ok bool) {
+	r.mx.RLock()
+	defer r.mx.RUnlock()
+
 	c.Name = name
 	c.Value, ok = r.gauges[c.Name]
 

@@ -30,10 +30,10 @@ func New(s storage.MetricRepository) *handler {
 	h.Use(middleware.Logger)
 	h.Use(middleware.Recoverer)
 
-	h.Get("/", h.getAllHandler())
-	h.Get("/value/{metricType}/{metricName}", h.getValueHandler())
+	h.Get("/", h.getAllHandler)
+	h.Get("/value/{metricType}/{metricName}", h.getValueHandler)
 
-	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandler())
+	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandler)
 
 	return h
 }
