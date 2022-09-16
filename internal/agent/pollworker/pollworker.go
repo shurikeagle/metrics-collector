@@ -12,13 +12,13 @@ import (
 
 // Poller collects any metrics
 type Poller interface {
-	Poll() metric.Metrics
+	Poll(*metric.Metrics)
 }
 
 type pollWorker struct {
 	running      bool
 	pollInterval time.Duration
-	currentStats metric.Metrics
+	currentStats *metric.Metrics
 	poller       Poller
 	pollCounter  int64
 	mx           sync.RWMutex
@@ -38,10 +38,7 @@ func New(poller Poller, pollInterval time.Duration) (*pollWorker, error) {
 	return &pollWorker{
 		pollInterval: pollInterval,
 		poller:       poller,
-		currentStats: metric.Metrics{
-			Gauges:   make(map[string]float64),
-			Counters: make(map[string]int64),
-		},
+		currentStats: metric.New(),
 	}, nil
 }
 
@@ -58,8 +55,11 @@ func (w *pollWorker) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			w.currentStats = w.poller.Poll()
+			w.poller.Poll(w.currentStats)
+
+			w.mx.Lock()
 			w.pollCounter++
+			w.mx.Unlock()
 		case <-ctx.Done():
 			log.Println(ctx.Err(), ", stopping poll worker")
 			w.running = false
@@ -69,11 +69,11 @@ func (w *pollWorker) Run(ctx context.Context) error {
 }
 
 // Stats returns results of the last pollWorker's metrics poll
-func (w *pollWorker) Stats() metric.Metrics {
-	w.mx.RLock()
-	defer w.mx.RUnlock()
+func (w *pollWorker) Stats() *metric.Metrics {
+	w.mx.Lock()
+	defer w.mx.Unlock()
 
-	w.currentStats.Counters["PollCount"] = w.pollCounter
+	w.currentStats.SetCounter("PollCount", w.pollCounter)
 	w.pollCounter = 0
 
 	return w.currentStats

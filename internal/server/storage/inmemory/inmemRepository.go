@@ -67,9 +67,15 @@ func (r *inmemMetricRepository) GetGauge(name string) (c metric.Gauge, ok bool) 
 }
 
 func (r *inmemMetricRepository) AddOrUpdateGauge(g metric.Gauge) {
+	r.mx.Lock()
+	defer r.mx.Unlock()
+
 	r.gauges[g.Name] = g.Value
 }
 
 func (r *inmemMetricRepository) AddOrUpdateCounter(c metric.Counter) {
+	r.mx.Lock()
+	defer r.mx.Unlock()
+
 	r.counters[c.Name] = c.Value
 }

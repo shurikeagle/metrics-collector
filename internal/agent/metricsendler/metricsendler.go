@@ -14,6 +14,7 @@ import (
 )
 
 const sendTimeout = 5 * time.Second
+const maxParallelRequests = 10
 
 type sendler struct {
 	serverURL      string
@@ -44,7 +45,7 @@ func New(ip string, port uint16, reportInterval time.Duration) (*sendler, error)
 	}, nil
 }
 
-func (s *sendler) Run(ctx context.Context, getMetricsFunc func() metric.Metrics) {
+func (s *sendler) Run(ctx context.Context, getMetricsFunc func() *metric.Metrics) {
 	ticker := time.NewTicker(s.reportInterval)
 	defer ticker.Stop()
 
@@ -60,19 +61,21 @@ func (s *sendler) Run(ctx context.Context, getMetricsFunc func() metric.Metrics)
 	}
 }
 
-func (s *sendler) send(metrics metric.Metrics) {
-	// TODO: Implement max parallel requests logic
+func (s *sendler) send(metrics *metric.Metrics) {
+	sem := make(chan interface{}, maxParallelRequests)
 
-	for m, v := range metrics.Counters {
-		go s.makeSendMetricRequest("Counter", m, strconv.FormatInt(v, 10))
+	c := metrics.Counters()
+	for m, v := range c {
+		go s.makeSendMetricRequest(sem, "Counter", m, strconv.FormatInt(v, 10))
 	}
 
-	for m, v := range metrics.Gauges {
-		go s.makeSendMetricRequest("Gauge", m, strconv.FormatFloat(v, 'f', 4, 64))
+	g := metrics.Gauges()
+	for m, v := range g {
+		go s.makeSendMetricRequest(sem, "Gauge", m, strconv.FormatFloat(v, 'f', 4, 64))
 	}
 }
 
-func (s *sendler) makeSendMetricRequest(metricType string, metricName string, value string) {
+func (s *sendler) makeSendMetricRequest(sem chan interface{}, metricType string, metricName string, value string) {
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
 
 	// TODO: Check if need url validation and special symbols handling
@@ -86,6 +89,9 @@ func (s *sendler) makeSendMetricRequest(metricType string, metricName string, va
 	defer cancelFunc()
 
 	request.Header.Add("Content-Type", "text/plain")
+
+	sem <- nil
+	defer func() { <-sem }()
 
 	response, err := s.client.Do(request)
 	if err != nil {
