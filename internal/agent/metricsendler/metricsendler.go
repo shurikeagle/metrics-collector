@@ -75,6 +75,7 @@ func (s *sendler) send(metrics *metric.Metrics) {
 	}
 }
 
+// obsolete
 func (s *sendler) makeSendMetricRequest(sem chan interface{}, metricType string, metricName string, value string) {
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
 
