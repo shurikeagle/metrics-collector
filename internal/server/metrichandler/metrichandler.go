@@ -8,6 +8,8 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/server/storage"
 )
 
+const JsonContentTypeExpected = "expected 'application/json' content type"
+
 var ErrUnexpectedMetricType = errors.New("unexpected metric type")
 var ErrMetricNotFound = errors.New("metric not found")
 
@@ -33,7 +35,8 @@ func New(s storage.MetricRepository) *handler {
 	h.Get("/", h.getAllHandler)
 	h.Get("/value/{metricType}/{metricName}", h.getValueHandler)
 
-	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandler)
+	h.Post("/update", h.updateHandlerFromBody)
+	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandlerFromPath)
 
 	return h
 }
