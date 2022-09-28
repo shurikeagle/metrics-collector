@@ -10,25 +10,19 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/shurikeagle/metrics-collector/internal/dto"
 	"github.com/shurikeagle/metrics-collector/internal/server/metric"
 )
 
 var ErrEmptyValueForGauge = errors.New("field 'value' cannot be empty for gauge metric")
 var ErrEmptyValueForCounter = errors.New("field 'delta' cannot be empty for counter metric")
 
-type UpdaterMetricRequest struct {
-	ID    string   `json:"id"`              // metric name
-	MType string   `json:"type"`            // metric type
-	Delta *int64   `json:"delta,omitempty"` // counter value
-	Value *float64 `json:"value,omitempty"` // gauge value
-}
-
 // POST /update
 func (h *handler) updateHandlerFromBody(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-type")
-	if contentType != "application/json" {
+	if contentType != JSONcontentType {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, JsonContentTypeExpected)
+		fmt.Fprintln(w, JSONcontentTypeExpected)
 	} else {
 		h.updateMetric(w, r, h.updateMetricFromBody)
 	}
@@ -66,21 +60,21 @@ func (h *handler) updateMetricFromBody(r *http.Request) error {
 		return err
 	}
 
-	updateRequest := UpdaterMetricRequest{}
+	updateRequest := dto.Metric{}
 	if err = json.Unmarshal(body, &updateRequest); err != nil {
 		return err
 	}
 
 	switch updateRequest.MType {
 	case "gauge":
-		if gauge, err := updateRequest.toGauge(); err != nil {
+		if gauge, err := toGauge(updateRequest); err != nil {
 			return err
 		} else {
 			h.storage.AddOrUpdateGauge(*gauge)
 		}
 
 	case "counter":
-		if counter, err := updateRequest.toCounter(); err != nil {
+		if counter, err := toCounter(updateRequest); err != nil {
 			return err
 		} else {
 			h.updateCounter(*counter)
@@ -93,25 +87,25 @@ func (h *handler) updateMetricFromBody(r *http.Request) error {
 	return nil
 }
 
-func (r UpdaterMetricRequest) toGauge() (*metric.Gauge, error) {
-	if r.Value == nil {
+func toGauge(m dto.Metric) (*metric.Gauge, error) {
+	if m.Value == nil {
 		return nil, ErrEmptyValueForGauge
 	}
 
 	return &metric.Gauge{
-		Name:  r.ID,
-		Value: *r.Value,
+		Name:  m.ID,
+		Value: *m.Value,
 	}, nil
 }
 
-func (r UpdaterMetricRequest) toCounter() (*metric.Counter, error) {
-	if r.Delta == nil {
+func toCounter(m dto.Metric) (*metric.Counter, error) {
+	if m.Delta == nil {
 		return nil, ErrEmptyValueForGauge
 	}
 
 	return &metric.Counter{
-		Name:  r.ID,
-		Value: *r.Delta,
+		Name:  m.ID,
+		Value: *m.Delta,
 	}, nil
 }
 
