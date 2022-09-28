@@ -39,9 +39,11 @@ func New(s storage.MetricRepository) *handler {
 	h.Get("/", h.getAllHandler)
 	h.Get("/value/{metricType}/{metricName}", h.getValueFromPathHandler)
 	h.Post("/value", h.getValueFromBodyHandler)
+	h.Post("/value/", h.getValueFromBodyHandler)
 
 	// Update
 	h.Post("/update", h.updateHandlerFromBody)
+	h.Post("/update/", h.updateHandlerFromBody)
 	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandlerFromPath)
 
 	return h
