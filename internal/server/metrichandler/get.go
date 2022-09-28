@@ -56,7 +56,7 @@ func (h *handler) getValueFromPathHandler(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "text/plain")
 
-	if value, err := h.getMetricValueFromUrl(r); err != nil {
+	if value, err := h.getMetricValueFromPath(r); err != nil {
 		errCode := getStatusCodeByError(err)
 		w.WriteHeader(errCode)
 
@@ -133,7 +133,7 @@ func (h *handler) getMetricFromBody(r *http.Request) (*dto.Metric, error) {
 	return &metric, nil
 }
 
-func (h *handler) getMetricValueFromUrl(r *http.Request) (string, error) {
+func (h *handler) getMetricValueFromPath(r *http.Request) (string, error) {
 	metricType := strings.ToLower(chi.URLParam(r, "metricType"))
 	metricName := chi.URLParam(r, "metricName")
 
