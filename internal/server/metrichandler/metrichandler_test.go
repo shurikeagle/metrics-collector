@@ -38,7 +38,7 @@ func TestUpdateHandler(t *testing.T) {
 			name:         "update without other path",
 			method:       http.MethodPost,
 			path:         "/update/",
-			expectedCode: http.StatusNotFound,
+			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "update metric without value",

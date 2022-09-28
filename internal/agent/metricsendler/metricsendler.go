@@ -1,16 +1,18 @@
 package metricsendler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/shurikeagle/metrics-collector/internal/agent/metric"
+	"github.com/shurikeagle/metrics-collector/internal/dto"
 )
 
 const sendTimeout = 5 * time.Second
@@ -66,29 +68,44 @@ func (s *sendler) send(metrics *metric.Metrics) {
 
 	c := metrics.Counters()
 	for m, v := range c {
-		go s.makeSendMetricRequest(sem, "Counter", m, strconv.FormatInt(v, 10))
+		metric := dto.Metric{
+			ID:    m,
+			MType: "Counter",
+			Delta: &v,
+		}
+		go s.makeSendMetricRequest(sem, metric)
 	}
 
 	g := metrics.Gauges()
 	for m, v := range g {
-		go s.makeSendMetricRequest(sem, "Gauge", m, strconv.FormatFloat(v, 'f', 4, 64))
+		metric := dto.Metric{
+			ID:    m,
+			MType: "Gauge",
+			Value: &v,
+		}
+		go s.makeSendMetricRequest(sem, metric)
 	}
 }
 
-func (s *sendler) makeSendMetricRequest(sem chan interface{}, metricType string, metricName string, value string) {
+func (s *sendler) makeSendMetricRequest(sem chan interface{}, metric dto.Metric) {
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
 
-	// TODO: Check if need url validation and special symbols handling
-	mURL := fmt.Sprintf("%s/update/%s/%s/%s", s.serverURL, metricType, metricName, value)
+	reqBody, err := json.Marshal(metric)
+	if err != nil {
+		// we send same requests in send func, so err in making request is fatal
+		log.Fatal(err)
+	}
 
-	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, nil)
+	mURL := fmt.Sprintf("%s/update", s.serverURL)
+
+	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		// we send same requests in send func, so err in making request is fatal
 		log.Fatal(err)
 	}
 	defer cancelFunc()
 
-	request.Header.Add("Content-Type", "text/plain")
+	request.Header.Add("Content-Type", "application/json")
 
 	sem <- nil
 	defer func() { <-sem }()
