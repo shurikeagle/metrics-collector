@@ -113,7 +113,7 @@ func (h *handler) getMetricFromBody(r *http.Request) (*dto.Metric, error) {
 		MType: req.MType,
 	}
 
-	switch req.MType {
+	switch strings.ToLower(req.MType) {
 	case "gauge":
 		if g, ok := h.storage.GetGauge(req.ID); !ok {
 			return nil, ErrMetricNotFound

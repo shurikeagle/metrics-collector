@@ -17,6 +17,7 @@ import (
 var ErrEmptyValueForGauge = errors.New("field 'value' cannot be empty for gauge metric")
 var ErrEmptyValueForCounter = errors.New("field 'delta' cannot be empty for counter metric")
 
+// TODO: tests for this method
 // POST /update
 func (h *handler) updateHandlerFromBody(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-type")
@@ -65,7 +66,7 @@ func (h *handler) updateMetricFromBody(r *http.Request) error {
 		return err
 	}
 
-	switch updateRequest.MType {
+	switch strings.ToLower(updateRequest.MType) {
 	case "gauge":
 		if gauge, err := toGauge(updateRequest); err != nil {
 			return err
