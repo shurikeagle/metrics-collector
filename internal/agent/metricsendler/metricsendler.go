@@ -26,22 +26,22 @@ type sendler struct {
 
 // New creates new sendler.
 // sendler send metrics to configured host with reportInterval
-func New(ip string, port uint16, reportInterval time.Duration) (*sendler, error) {
-	if ip == "" {
-		return nil, errors.New("ip is empty")
+func New(serverAddress string, reportInterval time.Duration) (*sendler, error) {
+	if serverAddress == "" {
+		return nil, errors.New("address is empty")
 	}
 
 	if reportInterval == 0 {
 		return nil, errors.New("report can't be 0")
 	}
 
-	sURL := fmt.Sprintf("%s:%d", ip, port)
-	if _, err := url.Parse(sURL); err != nil {
+	serverURL := fmt.Sprintf("http://%s", serverAddress)
+	if _, err := url.Parse(serverURL); err != nil {
 		return nil, err
 	}
 
 	return &sendler{
-		serverURL:      sURL,
+		serverURL:      serverURL,
 		reportInterval: reportInterval,
 		client:         &http.Client{},
 	}, nil

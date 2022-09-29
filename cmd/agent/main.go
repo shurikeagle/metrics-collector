@@ -8,32 +8,33 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/shurikeagle/metrics-collector/internal/agent/metricsendler"
 	"github.com/shurikeagle/metrics-collector/internal/agent/pollworker"
 	"github.com/shurikeagle/metrics-collector/internal/agent/runtimepoller"
 )
 
-const (
-	serverIP   = "http://127.0.0.1"
-	serverPort = 8080
-)
-
-const (
-	pollInterval   = 2 * time.Second
-	reportInterval = 10 * time.Second
-)
+type appConfig struct {
+	ServerAddress     string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	PollIntervalSec   int    `env:"POLL_INTERVAL" envDefault:"2"`
+	ReportIntervalSec int    `env:"REPORT_INTERVAL" envDefault:"10"`
+}
 
 func main() {
 	log.Println("poll agent start")
 
+	appConfig := buildAppConfig()
+
 	rPoller := runtimepoller.Poller{}
+	pollInterval := time.Duration(appConfig.PollIntervalSec) * time.Second
 	worker, err := pollworker.New(&rPoller, pollInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	mSedler, err := metricsendler.New(serverIP, serverPort, reportInterval)
+	reportInterval := time.Duration(appConfig.ReportIntervalSec) * time.Second
+	mSedler, err := metricsendler.New(appConfig.ServerAddress, reportInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -51,4 +52,14 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-quit
 	log.Println("agent stopped")
+}
+
+func buildAppConfig() appConfig {
+	cfg := appConfig{}
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return cfg
 }
