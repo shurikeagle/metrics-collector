@@ -15,9 +15,9 @@ import (
 )
 
 type appConfig struct {
-	ServerAddress     string `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	PollIntervalSec   int    `env:"POLL_INTERVAL" envDefault:"2"`
-	ReportIntervalSec int    `env:"REPORT_INTERVAL" envDefault:"10"`
+	ServerAddress  string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
 }
 
 func main() {
@@ -26,15 +26,13 @@ func main() {
 	appConfig := buildAppConfig()
 
 	rPoller := runtimepoller.Poller{}
-	pollInterval := time.Duration(appConfig.PollIntervalSec) * time.Second
-	worker, err := pollworker.New(&rPoller, pollInterval)
+	worker, err := pollworker.New(&rPoller, appConfig.PollInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	reportInterval := time.Duration(appConfig.ReportIntervalSec) * time.Second
-	mSedler, err := metricsendler.New(appConfig.ServerAddress, reportInterval)
+	mSedler, err := metricsendler.New(appConfig.ServerAddress, appConfig.ReportInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
