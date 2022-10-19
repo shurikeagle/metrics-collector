@@ -21,6 +21,7 @@ func main() {
 		serverAddr = defaultServerAddr
 	}
 
+	// TODO: получение настроек архива
 	storage := inmemory.New()
 
 	mServer := metricserver.New(serverAddr, storage)
