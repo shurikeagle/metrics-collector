@@ -1,7 +1,9 @@
 package inmemory
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"sync"
@@ -16,10 +18,10 @@ var _ storage.MetricRepository = (*inmemMetricRepository)(nil)
 type inmemMetricRepository struct {
 	gauges          map[string]float64
 	counters        map[string]int64
-	archiveEnabled  bool
-	archiveFilePath string
-	mx              sync.RWMutex // корректно ли, что одна структура используется
-	// для лока файла-архива и мап репозитория одновременно
+	archiveFileName string
+	synchArchive    bool
+	metricMx        sync.RWMutex
+	archiveMx       sync.RWMutex
 }
 
 type InmemArchiveSettings struct {
@@ -28,30 +30,35 @@ type InmemArchiveSettings struct {
 	RestoreOnCreate bool
 }
 
+// TODO: разобраться, почему идет обращение к nil map
+// реализовать архив на стопе сервера
 type archiveMetrics struct {
-	gauges   map[string]float64
-	counters map[string]int64
+	Gauges   map[string]float64 `json:"gauges"`
+	Counters map[string]int64   `json:"counters"`
 }
 
-func New(archiveSettings InmemArchiveSettings) *inmemMetricRepository {
+func New(archiveSettings InmemArchiveSettings, ctx context.Context) *inmemMetricRepository {
+	synchArchive := archiveSettings.StoreInterval == 0
+
 	repos := &inmemMetricRepository{
-		archiveEnabled:  archiveSettings.StoreInterval == 0,
-		archiveFilePath: archiveSettings.FileName,
+		archiveFileName: archiveSettings.FileName,
+		synchArchive:    synchArchive,
 	}
 
 	if err := repos.initMetrics(archiveSettings.RestoreOnCreate); err != nil {
 		log.Fatalf(err.Error())
 	}
 
-	// TODO: запускать в отдельной горутине сохранение в архив по таймеру (если не синхронно)
-	// TODO: доработать синхронное сохранение архива
+	if !synchArchive {
+		go repos.runArchivator(archiveSettings.StoreInterval, ctx)
+	}
 
 	return repos
 }
 
 func (r *inmemMetricRepository) GetAll() ([]metric.Counter, []metric.Gauge) {
-	r.mx.RLock()
-	defer r.mx.RUnlock()
+	r.metricMx.RLock()
+	defer r.metricMx.RUnlock()
 
 	counters := make([]metric.Counter, 0, len(r.counters))
 	gauges := make([]metric.Gauge, 0, len(r.gauges))
@@ -74,8 +81,8 @@ func (r *inmemMetricRepository) GetAll() ([]metric.Counter, []metric.Gauge) {
 }
 
 func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bool) {
-	r.mx.RLock()
-	defer r.mx.RUnlock()
+	r.metricMx.RLock()
+	defer r.metricMx.RUnlock()
 
 	c.Name = name
 	c.Value, ok = r.counters[c.Name]
@@ -84,8 +91,8 @@ func (r *inmemMetricRepository) GetCounter(name string) (c metric.Counter, ok bo
 }
 
 func (r *inmemMetricRepository) GetGauge(name string) (c metric.Gauge, ok bool) {
-	r.mx.RLock()
-	defer r.mx.RUnlock()
+	r.metricMx.RLock()
+	defer r.metricMx.RUnlock()
 
 	c.Name = name
 	c.Value, ok = r.gauges[c.Name]
@@ -94,43 +101,51 @@ func (r *inmemMetricRepository) GetGauge(name string) (c metric.Gauge, ok bool) 
 }
 
 func (r *inmemMetricRepository) AddOrUpdateGauge(g metric.Gauge) {
-	r.mx.Lock()
-	defer r.mx.Unlock()
-
+	r.metricMx.Lock()
 	r.gauges[g.Name] = g.Value
+	r.metricMx.Unlock()
+
+	if r.synchArchive {
+		// TODO: Change archive logic to avoid resave whole archive file on every adding
+		r.ArchiveAll()
+	}
 }
 
 func (r *inmemMetricRepository) AddOrUpdateCounter(c metric.Counter) {
-	r.mx.Lock()
-	defer r.mx.Unlock()
-
+	r.metricMx.Lock()
 	r.counters[c.Name] = c.Value
+	r.metricMx.Unlock()
+
+	if r.synchArchive {
+		// TODO: Change archive logic to avoid resave whole archive file on every adding
+		r.ArchiveAll()
+	}
 }
 
 func (r *inmemMetricRepository) ArchiveAll() error {
-	r.mx.Lock()
-	defer r.mx.Unlock()
-
-	file, err := os.OpenFile(r.archiveFilePath, os.O_RDONLY|os.O_CREATE, 0777)
-	if err != nil {
-		return err
+	if r.archiveFileName == "" {
+		return nil
 	}
-	defer file.Close()
 
+	r.metricMx.RLock()
 	metricsToArchive := archiveMetrics{
-		gauges:   r.gauges,
-		counters: r.counters,
+		Gauges:   r.gauges,
+		Counters: r.counters,
 	}
 	bytesToArchive, err := json.Marshal(metricsToArchive)
 	if err != nil {
 		return err
 	}
+	r.metricMx.RUnlock()
 
-	return os.WriteFile(r.archiveFilePath, bytesToArchive, 0777)
+	r.archiveMx.Lock()
+	defer r.archiveMx.Unlock()
+
+	return os.WriteFile(r.archiveFileName, bytesToArchive, 0777)
 }
 
 func (r *inmemMetricRepository) initMetrics(restoreOnCreate bool) error {
-	if !r.archiveEnabled || !restoreOnCreate {
+	if r.archiveFileName == "" || !restoreOnCreate {
 		r.gauges = make(map[string]float64)
 		r.counters = make(map[string]int64)
 
@@ -141,13 +156,19 @@ func (r *inmemMetricRepository) initMetrics(restoreOnCreate bool) error {
 }
 
 func (r *inmemMetricRepository) restoreArchive() error {
-	fileBytes, err := os.ReadFile(r.archiveFilePath)
-	if err != nil {
-		return err
-	}
+	fileBytes, err := os.ReadFile(r.archiveFileName)
+	isNotExists := err != nil && errors.Is(err, os.ErrNotExist)
+	isEmptyFile := err == nil && (len(fileBytes) == 0 || len(fileBytes) == 2) // empty or '{}'
 
-	if len(fileBytes) == 0 {
+	if isNotExists || isEmptyFile {
+		r.gauges = make(map[string]float64)
+		r.counters = make(map[string]int64)
+		log.Println("nothing to restore from repository archive, skipping")
+
 		return nil
+	} else if err != nil {
+
+		return err
 	}
 
 	restoredMetrics := &archiveMetrics{}
@@ -156,8 +177,27 @@ func (r *inmemMetricRepository) restoreArchive() error {
 		return err
 	}
 
-	r.gauges = restoredMetrics.gauges
-	r.counters = restoredMetrics.counters
+	r.gauges = restoredMetrics.Gauges
+	r.counters = restoredMetrics.Counters
+
+	log.Println("metrics were restored from repository archive")
 
 	return nil
+}
+
+func (r *inmemMetricRepository) runArchivator(storeInterval time.Duration, ctx context.Context) {
+	ticker := time.NewTicker(storeInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := r.ArchiveAll(); err != nil {
+				log.Printf("couldn't archive metrics: %s", err.Error())
+			}
+		case <-ctx.Done():
+
+			return
+		}
+	}
 }
