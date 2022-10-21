@@ -44,15 +44,14 @@ func main() {
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	select {
-	case <-quit:
-		if err := storage.ArchiveAll(); err != nil {
-			log.Printf("couldn't archive metrics on stop: %s", err.Error())
-		} else {
-			log.Printf("metrics were archived")
-		}
-		log.Println("metric server stopped")
+	<-quit
+
+	if err := storage.ArchiveAll(); err != nil {
+		log.Printf("couldn't archive metrics on stop: %s", err.Error())
+	} else {
+		log.Printf("metrics were archived")
 	}
+	log.Println("metric server stopped")
 }
 
 func buildAppConfig() appConfig {
