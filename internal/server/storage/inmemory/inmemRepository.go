@@ -30,8 +30,6 @@ type InmemArchiveSettings struct {
 	RestoreOnCreate bool
 }
 
-// TODO: разобраться, почему идет обращение к nil map
-// реализовать архив на стопе сервера
 type archiveMetrics struct {
 	Gauges   map[string]float64 `json:"gauges"`
 	Counters map[string]int64   `json:"counters"`
