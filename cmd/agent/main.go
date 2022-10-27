@@ -62,10 +62,10 @@ func main() {
 }
 
 func buildAppConfig() {
-	flag.Parse()
-
 	err := env.Parse(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	flag.Parse()
 }

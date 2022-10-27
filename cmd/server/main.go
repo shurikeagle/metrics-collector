@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -65,10 +66,14 @@ func main() {
 }
 
 func buildAppConfig() {
-	flag.Parse()
-
 	err := env.Parse(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("before parse: %v\n", cfg)
+
+	flag.Parse()
+
+	fmt.Printf("after parse: %v\n", cfg)
 }
