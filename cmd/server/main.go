@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"os/signal"
@@ -14,21 +15,30 @@ import (
 )
 
 type appConfig struct {
-	ServerAddress           string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	RepArchiveStoreInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
-	RepArchiveStoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	RestoreRepOnStart       bool          `env:"RESTORE" envDefault:"true"`
+	ServerAddress           string        `env:"ADDRESS"`
+	RepArchiveStoreInterval time.Duration `env:"STORE_INTERVAL"`
+	RepArchiveStoreFile     string        `env:"STORE_FILE"`
+	RestoreRepOnStart       bool          `env:"RESTORE"`
+}
+
+var cfg *appConfig = &appConfig{}
+
+func init() {
+	flag.StringVar(&cfg.ServerAddress, "a", "127.0.0.1:8080", "Server address")
+	flag.BoolVar(&cfg.RestoreRepOnStart, "r", true, "Restore repository archive on start")
+	flag.DurationVar(&cfg.RepArchiveStoreInterval, "i", 300*time.Second, "Repository archive store interval")
+	flag.StringVar(&cfg.RepArchiveStoreFile, "f", "/tmp/devops-metrics-db.json", "Repository store file full name")
 }
 
 func main() {
 	log.Println("starting metric server")
 
-	appConfig := buildAppConfig()
+	buildAppConfig()
 
 	inmemArchiveSettings := inmemory.InmemArchiveSettings{
-		StoreInterval:   appConfig.RepArchiveStoreInterval,
-		FileName:        appConfig.RepArchiveStoreFile,
-		RestoreOnCreate: appConfig.RestoreRepOnStart,
+		StoreInterval:   cfg.RepArchiveStoreInterval,
+		FileName:        cfg.RepArchiveStoreFile,
+		RestoreOnCreate: cfg.RestoreRepOnStart,
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -36,7 +46,7 @@ func main() {
 
 	storage := inmemory.New(inmemArchiveSettings, ctx)
 
-	mServer := metricserver.New(appConfig.ServerAddress, storage)
+	mServer := metricserver.New(cfg.ServerAddress, storage)
 
 	go func() {
 		log.Fatal(mServer.Run())
@@ -54,12 +64,11 @@ func main() {
 	log.Println("metric server stopped")
 }
 
-func buildAppConfig() appConfig {
-	cfg := appConfig{}
-	err := env.Parse(&cfg)
+func buildAppConfig() {
+	flag.Parse()
+
+	err := env.Parse(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return cfg
 }

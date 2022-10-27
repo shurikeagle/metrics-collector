@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"os/signal"
@@ -15,24 +16,32 @@ import (
 )
 
 type appConfig struct {
-	ServerAddress  string        `env:"ADDRESS" envDefault:"127.0.0.1:8080"`
-	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
+	ServerAddress  string        `env:"ADDRESS"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
+}
+
+var cfg *appConfig = &appConfig{}
+
+func init() {
+	flag.StringVar(&cfg.ServerAddress, "a", "127.0.0.1:8080", "Server address")
+	flag.DurationVar(&cfg.PollInterval, "p", 2*time.Second, "Agent poller's poll interval")
+	flag.DurationVar(&cfg.ReportInterval, "i", 10*time.Second, "Agent report interval to server")
 }
 
 func main() {
 	log.Println("poll agent start")
 
-	appConfig := buildAppConfig()
+	buildAppConfig()
 
 	rPoller := runtimepoller.Poller{}
-	worker, err := pollworker.New(&rPoller, appConfig.PollInterval)
+	worker, err := pollworker.New(&rPoller, cfg.PollInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	mSedler, err := metricsendler.New(appConfig.ServerAddress, appConfig.ReportInterval)
+	mSedler, err := metricsendler.New(cfg.ServerAddress, cfg.ReportInterval)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -52,12 +61,11 @@ func main() {
 	log.Println("agent stopped")
 }
 
-func buildAppConfig() appConfig {
-	cfg := appConfig{}
-	err := env.Parse(&cfg)
+func buildAppConfig() {
+	flag.Parse()
+
+	err := env.Parse(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return cfg
 }
