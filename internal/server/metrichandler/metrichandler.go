@@ -30,10 +30,14 @@ func New(s storage.MetricRepository) *handler {
 		storage: s,
 	}
 
+	// common middleware
 	h.Use(middleware.RequestID)
 	h.Use(middleware.RealIP)
 	h.Use(middleware.Logger)
 	h.Use(middleware.Recoverer)
+
+	// custom middleware
+	h.Use(gzipMiddleware)
 
 	// Get
 	h.Get("/", h.getAllHandler)
