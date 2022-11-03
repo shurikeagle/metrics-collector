@@ -53,14 +53,25 @@ func main() {
 	}()
 
 	quit := make(chan os.Signal, 1)
+	shutdownDone := make(chan bool, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	<-quit
 
-	if err := storage.ArchiveAll(); err != nil {
-		log.Printf("couldn't archive metrics on stop: %s", err.Error())
-	} else {
-		log.Printf("metrics were archived")
-	}
+	go func() {
+		<-quit
+
+		if err := storage.ArchiveAll(); err != nil {
+			log.Printf("couldn't archive metrics on stop: %s", err.Error())
+		}
+
+		cancelFunc()
+
+		mServer.Stop(ctx)
+
+		shutdownDone <- true
+	}()
+
+	<-shutdownDone
+
 	log.Println("metric server stopped")
 }
 

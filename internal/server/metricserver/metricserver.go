@@ -1,6 +1,7 @@
 package metricserver
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/shurikeagle/metrics-collector/internal/server/metrichandler"
@@ -27,4 +28,9 @@ func New(serverAddress string, storage storage.MetricRepository) *metricServer {
 // Run starts metricServer
 func (s *metricServer) Run() error {
 	return s.server.ListenAndServe()
+}
+
+// Run starts metricServer
+func (s *metricServer) Stop(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
