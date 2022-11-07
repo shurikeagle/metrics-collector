@@ -51,7 +51,9 @@ func main() {
 	defer cancelFunc()
 
 	go func() {
-		log.Println(worker.Run(ctx))
+		if err := worker.Run(ctx); err != nil {
+			log.Println(err)
+		}
 	}()
 	go mSedler.Run(ctx, worker.Stats)
 

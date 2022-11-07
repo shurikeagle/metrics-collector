@@ -68,20 +68,22 @@ func (s *sendler) send(metrics *metric.Metrics) {
 
 	c := metrics.Counters()
 	for m, v := range c {
+		delta := v
 		metric := dto.Metric{
 			ID:    m,
 			MType: "Counter",
-			Delta: &v,
+			Delta: &delta,
 		}
 		go s.makeSendMetricRequest(sem, metric)
 	}
 
 	g := metrics.Gauges()
 	for m, v := range g {
+		value := v
 		metric := dto.Metric{
 			ID:    m,
 			MType: "Gauge",
-			Value: &v,
+			Value: &value,
 		}
 		go s.makeSendMetricRequest(sem, metric)
 	}
