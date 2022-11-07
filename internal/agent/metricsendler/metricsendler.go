@@ -64,7 +64,7 @@ func (s *sendler) Run(ctx context.Context, getMetricsFunc func() *metric.Metrics
 }
 
 func (s *sendler) send(metrics *metric.Metrics) {
-	sem := make(chan interface{}, maxParallelRequests)
+	sem := make(chan struct{}, maxParallelRequests)
 
 	c := metrics.Counters()
 	for m, v := range c {
@@ -87,32 +87,35 @@ func (s *sendler) send(metrics *metric.Metrics) {
 	}
 }
 
-func (s *sendler) makeSendMetricRequest(sem chan interface{}, metric dto.Metric) {
+func (s *sendler) makeSendMetricRequest(sem chan struct{}, metric dto.Metric) {
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
+	defer cancelFunc()
 
 	reqBody, err := json.Marshal(metric)
 	if err != nil {
-		// we send same requests in send func, so err in making request is fatal
-		log.Fatal(err)
+		log.Println(err)
+
+		return
 	}
 
 	mURL := fmt.Sprintf("%s/update", s.serverURL)
 
 	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		// we send same requests in send func, so err in making request is fatal
-		log.Fatal(err)
+		log.Println(err)
+
+		return
 	}
-	defer cancelFunc()
 
 	request.Header.Add("Content-Type", "application/json")
 
-	sem <- nil
+	sem <- struct{}{}
 	defer func() { <-sem }()
 
 	response, err := s.client.Do(request)
 	if err != nil {
 		log.Println(err)
+
 		return
 	}
 
