@@ -15,7 +15,7 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/dto"
 )
 
-const sendTimeout = 5 * time.Second
+const sendTimeout = 20 * time.Second
 const maxParallelRequests = 10
 
 type sendler struct {
