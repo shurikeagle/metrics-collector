@@ -26,7 +26,7 @@ var cfg *appConfig = &appConfig{}
 func init() {
 	flag.StringVar(&cfg.ServerAddress, "a", "127.0.0.1:8080", "Server address")
 	flag.DurationVar(&cfg.PollInterval, "p", 2*time.Second, "Agent poller's poll interval")
-	flag.DurationVar(&cfg.ReportInterval, "i", 10*time.Second, "Agent report interval to server")
+	flag.DurationVar(&cfg.ReportInterval, "r", 10*time.Second, "Agent report interval to server")
 }
 
 func main() {
@@ -37,21 +37,21 @@ func main() {
 	rPoller := runtimepoller.Poller{}
 	worker, err := pollworker.New(&rPoller, cfg.PollInterval)
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	mSedler, err := metricsendler.New(cfg.ServerAddress, cfg.ReportInterval)
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
 	go func() {
-		log.Println(worker.Run(ctx))
+		if err := worker.Run(ctx); err != nil {
+			log.Println(err)
+		}
 	}()
 	go mSedler.Run(ctx, worker.Stats)
 
