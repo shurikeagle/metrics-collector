@@ -1,7 +1,7 @@
 package metricserver
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 
 	"github.com/shurikeagle/metrics-collector/internal/server/metrichandler"
@@ -13,11 +13,10 @@ type metricServer struct {
 }
 
 // New create http metricServer with metric api handling
-func New(ip string, port uint16, storage storage.MetricRepository) *metricServer {
-	addr := fmt.Sprintf("%s:%d", ip, port)
+func New(serverAddress string, storage storage.MetricRepository) *metricServer {
 	router := metrichandler.New(storage)
 	httpServer := &http.Server{
-		Addr:    addr,
+		Addr:    serverAddress,
 		Handler: router,
 	}
 
@@ -29,4 +28,9 @@ func New(ip string, port uint16, storage storage.MetricRepository) *metricServer
 // Run starts metricServer
 func (s *metricServer) Run() error {
 	return s.server.ListenAndServe()
+}
+
+// Run starts metricServer
+func (s *metricServer) Stop(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
