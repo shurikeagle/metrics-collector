@@ -1,19 +1,21 @@
 package metricsendler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/shurikeagle/metrics-collector/internal/agent/metric"
+	"github.com/shurikeagle/metrics-collector/internal/dto"
 )
 
-const sendTimeout = 5 * time.Second
+const sendTimeout = 20 * time.Second
 const maxParallelRequests = 10
 
 type sendler struct {
@@ -24,22 +26,22 @@ type sendler struct {
 
 // New creates new sendler.
 // sendler send metrics to configured host with reportInterval
-func New(ip string, port uint16, reportInterval time.Duration) (*sendler, error) {
-	if ip == "" {
-		return nil, errors.New("ip is empty")
+func New(serverAddress string, reportInterval time.Duration) (*sendler, error) {
+	if serverAddress == "" {
+		return nil, errors.New("address is empty")
 	}
 
 	if reportInterval == 0 {
 		return nil, errors.New("report can't be 0")
 	}
 
-	sURL := fmt.Sprintf("%s:%d", ip, port)
-	if _, err := url.Parse(sURL); err != nil {
+	serverURL := fmt.Sprintf("http://%s", serverAddress)
+	if _, err := url.Parse(serverURL); err != nil {
 		return nil, err
 	}
 
 	return &sendler{
-		serverURL:      sURL,
+		serverURL:      serverURL,
 		reportInterval: reportInterval,
 		client:         &http.Client{},
 	}, nil
@@ -62,40 +64,60 @@ func (s *sendler) Run(ctx context.Context, getMetricsFunc func() *metric.Metrics
 }
 
 func (s *sendler) send(metrics *metric.Metrics) {
-	sem := make(chan interface{}, maxParallelRequests)
+	sem := make(chan struct{}, maxParallelRequests)
 
 	c := metrics.Counters()
 	for m, v := range c {
-		go s.makeSendMetricRequest(sem, "Counter", m, strconv.FormatInt(v, 10))
+		delta := v
+		metric := dto.Metric{
+			ID:    m,
+			MType: "Counter",
+			Delta: &delta,
+		}
+		go s.makeSendMetricRequest(sem, metric)
 	}
 
 	g := metrics.Gauges()
 	for m, v := range g {
-		go s.makeSendMetricRequest(sem, "Gauge", m, strconv.FormatFloat(v, 'f', 4, 64))
+		value := v
+		metric := dto.Metric{
+			ID:    m,
+			MType: "Gauge",
+			Value: &value,
+		}
+		go s.makeSendMetricRequest(sem, metric)
 	}
 }
 
-func (s *sendler) makeSendMetricRequest(sem chan interface{}, metricType string, metricName string, value string) {
+func (s *sendler) makeSendMetricRequest(sem chan struct{}, metric dto.Metric) {
 	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), sendTimeout)
-
-	// TODO: Check if need url validation and special symbols handling
-	mURL := fmt.Sprintf("%s/update/%s/%s/%s", s.serverURL, metricType, metricName, value)
-
-	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, nil)
-	if err != nil {
-		// we send same requests in send func, so err in making request is fatal
-		log.Fatal(err)
-	}
 	defer cancelFunc()
 
-	request.Header.Add("Content-Type", "text/plain")
+	reqBody, err := json.Marshal(metric)
+	if err != nil {
+		log.Println(err)
 
-	sem <- nil
+		return
+	}
+
+	mURL := fmt.Sprintf("%s/update", s.serverURL)
+
+	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Println(err)
+
+		return
+	}
+
+	request.Header.Add("Content-Type", "application/json")
+
+	sem <- struct{}{}
 	defer func() { <-sem }()
 
 	response, err := s.client.Do(request)
 	if err != nil {
 		log.Println(err)
+
 		return
 	}
 

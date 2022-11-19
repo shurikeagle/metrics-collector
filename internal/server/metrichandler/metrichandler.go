@@ -8,6 +8,11 @@ import (
 	"github.com/shurikeagle/metrics-collector/internal/server/storage"
 )
 
+const JSONcontentType = "application/json"
+
+const JSONcontentTypeExpected = "expected 'application/json' content type"
+
+var ErrInvalidRequestBody = errors.New("invalid request body")
 var ErrUnexpectedMetricType = errors.New("unexpected metric type")
 var ErrMetricNotFound = errors.New("metric not found")
 
@@ -25,15 +30,25 @@ func New(s storage.MetricRepository) *handler {
 		storage: s,
 	}
 
+	// common middleware
 	h.Use(middleware.RequestID)
 	h.Use(middleware.RealIP)
 	h.Use(middleware.Logger)
 	h.Use(middleware.Recoverer)
 
-	h.Get("/", h.getAllHandler)
-	h.Get("/value/{metricType}/{metricName}", h.getValueHandler)
+	// custom middleware
+	h.Use(gzipMiddleware)
 
-	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandler)
+	// Get
+	h.Get("/", h.getAllHandler)
+	h.Get("/value/{metricType}/{metricName}", h.getValueFromPathHandler)
+	h.Post("/value", h.getValueFromBodyHandler)
+	h.Post("/value/", h.getValueFromBodyHandler)
+
+	// Update
+	h.Post("/update", h.updateHandlerFromBody)
+	h.Post("/update/", h.updateHandlerFromBody)
+	h.Post("/update/{metricType}/{metricName}/{metricValue}", h.updateHandlerFromPath)
 
 	return h
 }

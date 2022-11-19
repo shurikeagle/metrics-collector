@@ -2,48 +2,56 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/shurikeagle/metrics-collector/internal/agent/metricsendler"
 	"github.com/shurikeagle/metrics-collector/internal/agent/pollworker"
 	"github.com/shurikeagle/metrics-collector/internal/agent/runtimepoller"
 )
 
-const (
-	serverIP   = "http://127.0.0.1"
-	serverPort = 8080
-)
+type appConfig struct {
+	ServerAddress  string        `env:"ADDRESS"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
+}
 
-const (
-	pollInterval   = 2 * time.Second
-	reportInterval = 10 * time.Second
-)
+var cfg *appConfig = &appConfig{}
+
+func init() {
+	flag.StringVar(&cfg.ServerAddress, "a", "127.0.0.1:8080", "Server address")
+	flag.DurationVar(&cfg.PollInterval, "p", 2*time.Second, "Agent poller's poll interval")
+	flag.DurationVar(&cfg.ReportInterval, "r", 10*time.Second, "Agent report interval to server")
+}
 
 func main() {
 	log.Println("poll agent start")
 
+	buildAppConfig()
+
 	rPoller := runtimepoller.Poller{}
-	worker, err := pollworker.New(&rPoller, pollInterval)
+	worker, err := pollworker.New(&rPoller, cfg.PollInterval)
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
-	mSedler, err := metricsendler.New(serverIP, serverPort, reportInterval)
+	mSedler, err := metricsendler.New(cfg.ServerAddress, cfg.ReportInterval)
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
 	go func() {
-		log.Println(worker.Run(ctx))
+		if err := worker.Run(ctx); err != nil {
+			log.Println(err)
+		}
 	}()
 	go mSedler.Run(ctx, worker.Stats)
 
@@ -51,4 +59,13 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-quit
 	log.Println("agent stopped")
+}
+
+func buildAppConfig() {
+	flag.Parse()
+
+	err := env.Parse(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
