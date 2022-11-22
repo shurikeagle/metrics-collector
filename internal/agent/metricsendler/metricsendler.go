@@ -2,6 +2,7 @@ package metricsendler
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -102,7 +103,23 @@ func (s *sendler) makeSendMetricRequest(sem chan struct{}, metric dto.Metric) {
 
 	mURL := fmt.Sprintf("%s/update", s.serverURL)
 
-	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, bytes.NewBuffer(reqBody))
+	// TODO: remove after debugging
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	_, err = w.Write(reqBody)
+	if err != nil {
+		log.Printf("failed write data to compress temporary buffer: %v", err)
+		return
+	}
+	err = w.Close()
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+	// =========================
+
+	// TODO: Change last param to reqBody after debugging
+	request, err := http.NewRequestWithContext(timeoutCtx, "POST", mURL, bytes.NewBuffer(b.Bytes()))
 	if err != nil {
 		log.Println(err)
 
@@ -110,6 +127,10 @@ func (s *sendler) makeSendMetricRequest(sem chan struct{}, metric dto.Metric) {
 	}
 
 	request.Header.Add("Content-Type", "application/json")
+
+	// TODO: remove after debugging
+	request.Header.Add("Content-Encoding", "gzip")
+	request.Header.Add("Accept-Encoding", "gzip, deflate, br")
 
 	sem <- struct{}{}
 	defer func() { <-sem }()
